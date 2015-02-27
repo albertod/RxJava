@@ -8,13 +8,17 @@ description = 'RxJava: Reactive Extensions for the JVM – a library for composi
 apply plugin: 'rxjava-project'
 apply plugin: 'java'
 
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
 dependencies {
+    compile 'org.reactivestreams:reactive-streams:1.0.0.RC3'
     testCompile 'junit:junit-dep:4.10'
     testCompile 'org.mockito:mockito-core:1.8.5'
 }
 
 javadoc {
-    exclude "**/rx/internal/**"
+    exclude "**/io/reactivex/internal/**"
 }
 
 // support for snapshot/final releases with the various branches RxJava uses
