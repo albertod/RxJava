@@ -12,13 +12,11 @@ package io.reactivex;
 
 import io.reactivex.subscribers.TestSubscriber;
 
-import java.util.Arrays;
-
 import org.junit.Test;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-public class ObservableTest {
+public class ObservableHelloWorldTest {
 
     /**
      * "Hello World" => Most basic form of create/subscribe
@@ -44,9 +42,7 @@ public class ObservableTest {
 
         TestSubscriber<Integer> ts = new TestSubscriber<>();
         o.subscribe(ts);
-        ts.awaitTerminalEvent();
-        ts.assertNoErrors();
-        ts.assertReceivedOnNext(Arrays.asList(1));
+        ts.assertSuccessfulOnNextOf(1);
     }
 
     /**
@@ -99,8 +95,6 @@ public class ObservableTest {
 
         TestSubscriber<String> ts = new TestSubscriber<>();
         mapped.subscribe(ts);
-        ts.awaitTerminalEvent();
-        ts.assertNoErrors();
-        ts.assertReceivedOnNext(Arrays.asList("transformed_1"));
+        ts.assertSuccessfulOnNextOf("transformed_1");
     }
 }

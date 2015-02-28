@@ -15,11 +15,13 @@
  */
 package io.reactivex.internal.operators;
 
-import rx.Observable.Operator;
-import rx.Subscriber;
-import rx.exceptions.Exceptions;
-import rx.exceptions.OnErrorThrowable;
-import rx.functions.Func1;
+import io.reactivex.Observable.Operator;
+import io.reactivex.exceptions.Exceptions;
+import io.reactivex.exceptions.OnErrorThrowable;
+import io.reactivex.functions.Func1;
+
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 /**
  * Applies a function of your choosing to every item emitted by an {@code Observable}, and emits the results of
@@ -36,31 +38,35 @@ public final class OperatorMap<T, R> implements Operator<R, T> {
     }
 
     @Override
-    public Subscriber<? super T> call(final Subscriber<? super R> o) {
-        return new Subscriber<T>(o) {
+    public Subscriber<? super T> call(final Subscriber<? super R> child) {
+        return new Subscriber<T>() {
 
             @Override
-            public void onCompleted() {
-                o.onCompleted();
+            public void onComplete() {
+                child.onComplete();
             }
 
             @Override
             public void onError(Throwable e) {
-                o.onError(e);
+                child.onError(e);
             }
 
             @Override
             public void onNext(T t) {
                 try {
-                    o.onNext(transformer.call(t));
+                    child.onNext(transformer.call(t));
                 } catch (Throwable e) {
                     Exceptions.throwIfFatal(e);
                     onError(OnErrorThrowable.addValueAsLastCause(e, t));
                 }
             }
 
+            @Override
+            public void onSubscribe(Subscription s) {
+                child.onSubscribe(s);
+            }
+
         };
     }
 
 }
-

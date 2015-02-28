@@ -13,8 +13,11 @@ package io.reactivex;
 import io.reactivex.exceptions.OnErrorNotImplementedException;
 import io.reactivex.functions.Action0;
 import io.reactivex.functions.Action1;
+import io.reactivex.functions.Func1;
+import io.reactivex.internal.operators.OnSubscribeFromIterable;
+import io.reactivex.internal.operators.OperatorMap;
 
-import java.util.function.Function;
+import java.util.Arrays;
 
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -93,7 +96,7 @@ public class Observable<T> implements Publisher<T> {
     /**
      * Operator function for lifting into an Observable.
      */
-    public interface Operator<R, T> extends Function<Subscriber<? super R>, Subscriber<? super T>> {
+    public interface Operator<R, T> extends Func1<Subscriber<? super R>, Subscriber<? super T>> {
         // cover for generics insanity
     }
 
@@ -125,7 +128,7 @@ public class Observable<T> implements Publisher<T> {
             @Override
             public void call(Subscriber<? super R> o) {
                 try {
-                    Subscriber<? super T> st = lift.apply(o);
+                    Subscriber<? super T> st = lift.call(o);
                     try {
                         onSubscribe.call(st);
                     } catch (Throwable e) {
@@ -137,6 +140,105 @@ public class Observable<T> implements Publisher<T> {
             }
         });
     }
+
+    // ************************************************************************************************************************ //
+    // * Operator Section //
+    // ************************************************************************************************************************ //
+
+    /**
+     * Converts an {@link Iterable} sequence into an Observable that emits the items in the sequence.
+     * <p>
+     * <img width="640" height="315" src="https://raw.github.com/wiki/ReactiveX/RxJava/images/rx-operators/from.png" alt="">
+     * <dl>
+     * <dt><b>Scheduler:</b></dt>
+     * <dd>{@code from} does not operate by default on a particular {@link Scheduler}.</dd>
+     * </dl>
+     * 
+     * @param iterable
+     *            the source {@link Iterable} sequence
+     * @param <T>
+     *            the type of items in the {@link Iterable} sequence and the type of items to be emitted by the
+     *            resulting Observable
+     * @return an Observable that emits each item in the source {@link Iterable} sequence
+     * @see <a href="http://reactivex.io/documentation/operators/from.html">ReactiveX operators documentation: From</a>
+     */
+    public final static <T> Observable<T> from(Iterable<? extends T> iterable) {
+        return create(new OnSubscribeFromIterable<T>(iterable));
+    }
+
+    /**
+     * Converts an Array into an Observable that emits the items in the Array.
+     * <p>
+     * <img width="640" height="315" src="https://raw.github.com/wiki/ReactiveX/RxJava/images/rx-operators/from.png" alt="">
+     * <dl>
+     * <dt><b>Scheduler:</b></dt>
+     * <dd>{@code from} does not operate by default on a particular {@link Scheduler}.</dd>
+     * </dl>
+     * 
+     * @param array
+     *            the source Array
+     * @param <T>
+     *            the type of items in the Array and the type of items to be emitted by the resulting Observable
+     * @return an Observable that emits each item in the source Array
+     * @see <a href="http://reactivex.io/documentation/operators/from.html">ReactiveX operators documentation: From</a>
+     */
+    public final static <T> Observable<T> from(T[] array) {
+        return from(Arrays.asList(array));
+    }
+
+    /**
+     * Returns an Observable that emits a single item and then completes.
+     * <p>
+     * <img width="640" height="310" src="https://raw.github.com/wiki/ReactiveX/RxJava/images/rx-operators/just.png" alt="">
+     * <p>
+     * To convert any object into an Observable that emits that object, pass that object into the {@code just} method.
+     * <p>
+     * This is similar to the {@link #from(java.lang.Object[])} method, except that {@code from} will convert
+     * an {@link Iterable} object into an Observable that emits each of the items in the Iterable, one at a
+     * time, while the {@code just} method converts an Iterable into an Observable that emits the entire
+     * Iterable as a single item.
+     * <dl>
+     * <dt><b>Scheduler:</b></dt>
+     * <dd>{@code just} does not operate by default on a particular {@link Scheduler}.</dd>
+     * </dl>
+     * 
+     * @param value
+     *            the item to emit
+     * @param <T>
+     *            the type of that item
+     * @return an Observable that emits {@code value} as a single item and then completes
+     * @see <a href="http://reactivex.io/documentation/operators/just.html">ReactiveX operators documentation: Just</a>
+     */
+    @SafeVarargs
+    public final static <T> Observable<T> just(final T... value) {
+        // TODO add scalar optimization
+        //        return ScalarSynchronousObservable.create(value);
+        return from(Arrays.asList(value));
+    }
+
+    /**
+     * Returns an Observable that applies a specified function to each item emitted by the source Observable and
+     * emits the results of these function applications.
+     * <p>
+     * <img width="640" height="305" src="https://raw.github.com/wiki/ReactiveX/RxJava/images/rx-operators/map.png" alt="">
+     * <dl>
+     * <dt><b>Scheduler:</b></dt>
+     * <dd>{@code map} does not operate by default on a particular {@link Scheduler}.</dd>
+     * </dl>
+     * 
+     * @param func
+     *            a function to apply to each item emitted by the Observable
+     * @return an Observable that emits the items from the source Observable, transformed by the specified
+     *         function
+     * @see <a href="http://reactivex.io/documentation/operators/map.html">ReactiveX operators documentation: Map</a>
+     */
+    public final <R> Observable<R> map(Func1<? super T, ? extends R> func) {
+        return lift(new OperatorMap<T, R>(func));
+    }
+
+    // ************************************************************************************************************************ //
+    // * Subscription Methods Below //
+    // ************************************************************************************************************************ //
 
     /**
      * Subscribes to the {@link Observable} and receives notifications for each element.

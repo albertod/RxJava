@@ -16,6 +16,7 @@ package io.reactivex.subscribers;
 import io.reactivex.Notification;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -212,6 +213,42 @@ public class TestSubscriber<T> implements Subscriber<T> {
 
     }
 
+    /**
+     * Awaits terminal events, asserts no errors and asserts onNext. 
+     * <p>
+     * Shortcut for the following:
+     * <pre>{@code 
+        ts.awaitTerminalEvent();
+        ts.assertNoErrors();
+        ts.assertReceivedOnNext(items);
+     * }</pre>
+     * 
+     * @param items
+     */
+    public void assertSuccessfulOnNext(List<T> items) {
+        awaitTerminalEvent();
+        assertNoErrors();
+        assertReceivedOnNext(items);
+    }
+    
+    /**
+     * Awaits terminal events, asserts no errors and asserts onNext. 
+     * <p>
+     * Shortcut for the following:
+     * <pre>{@code 
+        ts.awaitTerminalEvent();
+        ts.assertNoErrors();
+        ts.assertReceivedOnNext(items);
+     * }</pre>
+     * 
+     * @param items
+     */
+    public void assertSuccessfulOnNextOf(T... items) {
+        awaitTerminalEvent();
+        assertNoErrors();
+        assertReceivedOnNext(Arrays.asList(items));
+    }
+    
     /**
      * Assert that a single terminal event occurred, either {@link #onCompleted} or {@link #onError}.
      *

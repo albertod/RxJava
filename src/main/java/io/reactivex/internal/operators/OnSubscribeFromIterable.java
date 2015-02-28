@@ -15,12 +15,14 @@
  */
 package io.reactivex.internal.operators;
 
+import io.reactivex.Observable.OnSubscribe;
+import io.reactivex.disposables.BooleanDisposable;
+
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
-import rx.Observable.OnSubscribe;
-import rx.Producer;
-import rx.Subscriber;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 /**
  * Converts an {@code Iterable} sequence into an {@code Observable}.
@@ -44,18 +46,19 @@ public final class OnSubscribeFromIterable<T> implements OnSubscribe<T> {
     @Override
     public void call(final Subscriber<? super T> o) {
         final Iterator<? extends T> it = is.iterator();
-        o.setProducer(new IterableProducer<T>(o, it));
+        o.onSubscribe(new IterableSubscription<T>(o, it));
     }
 
-    private static final class IterableProducer<T> implements Producer {
+    private static final class IterableSubscription<T> implements Subscription {
         private final Subscriber<? super T> o;
         private final Iterator<? extends T> it;
+        private final BooleanDisposable disposable = new BooleanDisposable();
 
         private volatile long requested = 0;
         @SuppressWarnings("rawtypes")
-        private static final AtomicLongFieldUpdater<IterableProducer> REQUESTED_UPDATER = AtomicLongFieldUpdater.newUpdater(IterableProducer.class, "requested");
+        private static final AtomicLongFieldUpdater<IterableSubscription> REQUESTED_UPDATER = AtomicLongFieldUpdater.newUpdater(IterableSubscription.class, "requested");
 
-        private IterableProducer(Subscriber<? super T> o, Iterator<? extends T> it) {
+        private IterableSubscription(Subscriber<? super T> o, Iterator<? extends T> it) {
             this.o = o;
             this.it = it;
         }
@@ -70,15 +73,15 @@ public final class OnSubscribeFromIterable<T> implements OnSubscribe<T> {
                 REQUESTED_UPDATER.set(this, n);
                 // fast-path without backpressure
                 while (it.hasNext()) {
-                    if (o.isUnsubscribed()) {
+                    if (disposable.isDisposed()) {
                         return;
                     }
                     o.onNext(it.next());
                 }
-                if (!o.isUnsubscribed()) {
-                    o.onCompleted();
+                if (!disposable.isDisposed()) {
+                    o.onComplete();
                 }
-            } else if(n > 0) {
+            } else if (n > 0) {
                 // backpressure is requested
                 long _c = BackpressureUtils.getAndAddRequest(REQUESTED_UPDATER, this, n);
                 if (_c == 0) {
@@ -90,7 +93,7 @@ public final class OnSubscribeFromIterable<T> implements OnSubscribe<T> {
                         long r = requested;
                         long numToEmit = r;
                         while (it.hasNext() && --numToEmit >= 0) {
-                            if (o.isUnsubscribed()) {
+                            if (disposable.isDisposed()) {
                                 return;
                             }
                             o.onNext(it.next());
@@ -98,8 +101,8 @@ public final class OnSubscribeFromIterable<T> implements OnSubscribe<T> {
                         }
 
                         if (!it.hasNext()) {
-                            if (!o.isUnsubscribed()) {
-                                o.onCompleted();
+                            if (!disposable.isDisposed()) {
+                                o.onComplete();
                             }
                             return;
                         }
@@ -112,6 +115,11 @@ public final class OnSubscribeFromIterable<T> implements OnSubscribe<T> {
                 }
             }
 
+        }
+
+        @Override
+        public void cancel() {
+            disposable.dispose();
         }
     }
 
