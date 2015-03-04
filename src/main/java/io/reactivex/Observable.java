@@ -15,6 +15,7 @@ import io.reactivex.functions.Action0;
 import io.reactivex.functions.Action1;
 import io.reactivex.functions.Func1;
 import io.reactivex.internal.operators.OnSubscribeFromIterable;
+import io.reactivex.internal.operators.OnSubscribeSubscribeOn;
 import io.reactivex.internal.operators.OperatorMap;
 
 import java.util.Arrays;
@@ -234,6 +235,32 @@ public class Observable<T> implements Publisher<T> {
      */
     public final <R> Observable<R> map(Func1<? super T, ? extends R> func) {
         return lift(new OperatorMap<T, R>(func));
+    }
+    
+    /**
+     * Asynchronously subscribes Observers to this Observable on the specified {@link Scheduler}.
+     * <p>
+     * <img width="640" height="305" src="https://raw.github.com/wiki/ReactiveX/RxJava/images/rx-operators/subscribeOn.png" alt="">
+     * <dl>
+     *  <dt><b>Scheduler:</b></dt>
+     *  <dd>you specify which {@link Scheduler} this operator will use</dd>
+     * </dl>
+     * 
+     * @param scheduler
+     *            the {@link Scheduler} to perform subscription actions on
+     * @return the source Observable modified so that its subscriptions happen on the
+     *         specified {@link Scheduler}
+     * @see <a href="http://reactivex.io/documentation/operators/subscribeon.html">ReactiveX operators documentation: SubscribeOn</a>
+     * @see <a href="http://www.grahamlea.com/2014/07/rxjava-threading-examples/">RxJava Threading Examples</a>
+     * @see #observeOn
+     */
+    public final Observable<T> subscribeOn(Scheduler scheduler) {
+//        if (this instanceof ScalarSynchronousObservable) {
+//            return ((ScalarSynchronousObservable<T>)this).scalarScheduleOn(scheduler);
+//        }
+//        return nest().lift(new OperatorSubscribeOn<T>(scheduler));
+        
+        return Observable.create(new OnSubscribeSubscribeOn<T>(this, scheduler));
     }
 
     // ************************************************************************************************************************ //

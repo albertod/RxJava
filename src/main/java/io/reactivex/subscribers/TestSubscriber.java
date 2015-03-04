@@ -14,6 +14,9 @@
 package io.reactivex.subscribers;
 
 import io.reactivex.Notification;
+import io.reactivex.Observer;
+import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.disposables.Disposables;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -39,8 +42,34 @@ public class TestSubscriber<T> implements Subscriber<T> {
     private final CountDownLatch latch = new CountDownLatch(1);
     private volatile Thread lastSeenThread;
 
-    public TestSubscriber(Subscriber<T> delegate) {
-        this.delegate = delegate;
+    public TestSubscriber(Subscriber<T> s) {
+        this.delegate = s;
+    }
+
+    public TestSubscriber(Observer<T> o) {
+        this.delegate = new Subscriber<T>() {
+
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.request(Long.MAX_VALUE);
+            }
+
+            @Override
+            public void onNext(T t) {
+                o.onNext(t);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                o.onError(t);
+            }
+
+            @Override
+            public void onComplete() {
+                o.onComplete();
+            }
+
+        };
     }
 
     public TestSubscriber() {
@@ -69,6 +98,12 @@ public class TestSubscriber<T> implements Subscriber<T> {
         };
     }
 
+    CompositeDisposable disposable = new CompositeDisposable();
+
+    public void unsubscribe() {
+        disposable.dispose();
+    }
+
     private Subscription subscription = null;
 
     @Override
@@ -78,6 +113,8 @@ public class TestSubscriber<T> implements Subscriber<T> {
         }
         this.subscription = s;
         this.delegate.onSubscribe(s);
+        // so we propagate disposal to the subscription
+        disposable.add(Disposables.create(() -> s.cancel()));
     }
 
     /**
@@ -214,11 +251,11 @@ public class TestSubscriber<T> implements Subscriber<T> {
     }
 
     /**
-     * Awaits terminal events, asserts no errors and asserts onNext. 
+     * Awaits terminal events, asserts no errors and asserts onNext.
      * <p>
      * Shortcut for the following:
      * <pre>{@code 
-        ts.awaitTerminalEvent();
+     *  ts.awaitTerminalEvent();
         ts.assertNoErrors();
         ts.assertReceivedOnNext(items);
      * }</pre>
@@ -230,13 +267,13 @@ public class TestSubscriber<T> implements Subscriber<T> {
         assertNoErrors();
         assertReceivedOnNext(items);
     }
-    
+
     /**
-     * Awaits terminal events, asserts no errors and asserts onNext. 
+     * Awaits terminal events, asserts no errors and asserts onNext.
      * <p>
      * Shortcut for the following:
      * <pre>{@code 
-        ts.awaitTerminalEvent();
+     *  ts.awaitTerminalEvent();
         ts.assertNoErrors();
         ts.assertReceivedOnNext(items);
      * }</pre>
@@ -248,7 +285,7 @@ public class TestSubscriber<T> implements Subscriber<T> {
         assertNoErrors();
         assertReceivedOnNext(Arrays.asList(items));
     }
-    
+
     /**
      * Assert that a single terminal event occurred, either {@link #onCompleted} or {@link #onError}.
      *
